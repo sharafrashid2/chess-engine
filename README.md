@@ -9,5 +9,5 @@ This chess engine is able to find all legal moves for every board state and dete
 ## Examples
 
 Here are some examples of the game running.
-[(public/example_board.png|width=100px)]
-[(public/example_board2.png|width=100px)]
+<img src="public/example_board.png" width="200px">
+<img src="public/example_board2.png" width="200px">
