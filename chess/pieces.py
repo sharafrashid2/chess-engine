@@ -6,7 +6,6 @@ import sys, os
 This file contains the classes for each of the 6 different pieces in chess
 """
 
-
 class Piece():
     def __init__(self, row, col, color, win):
         self.row = row
