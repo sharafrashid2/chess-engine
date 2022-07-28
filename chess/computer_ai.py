@@ -89,8 +89,7 @@ def construct_decision_tree(start_board, start_black_pieces, start_white_pieces,
             piece.get_all_moves(start_board)
 
 
-        if level > 0 and start_board[0][1] == 0:
-            game.generate_legal_moves(turn, pieces, start_board, False)
+        game.generate_legal_moves(turn, pieces, start_board, False)
 
         for piece in pieces:
             for move in piece.possible_moves:
