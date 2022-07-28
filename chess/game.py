@@ -41,14 +41,14 @@ class Game:
         # updates states in the game once a new turn starts based off the new board
         if self.changed_turn:
             self.generate_all_moves()
-            self.threat_map = self.generate_threat_map(self.board.board, self.board.black_pieces, self.board.white_pieces)
+            self.threat_map = self.generate_threat_map(self.turn, self.board.board, self.board.black_pieces, self.board.white_pieces)
 
             if self.turn == 'white':
                 pieces = self.board.white_pieces
             else:
                 pieces = self.board.black_pieces
 
-            self.all_legal_moves = self.generate_legal_moves(pieces, self.board.board, self.board.used_jump_two_prev)
+            self.all_legal_moves = self.generate_legal_moves(self.turn, pieces, self.board.board, self.board.used_jump_two_prev)
             self.changed_turn = False
 
             self.is_check()
@@ -57,8 +57,8 @@ class Game:
 
             # here computer makes decisions for black
             if not self.checkmated and not self.stalemated and self.turn == 'black':
-                tree = construct_decision_tree(self.board.board, self.board.black_pieces, self.board.white_pieces, self, 3)
-                result, total = mini_max(tree, 3)
+                tree = construct_decision_tree(self.board.board, self.board.black_pieces, self.board.white_pieces, self, 2)
+                result, total = mini_max(tree, 2)
                 if result:
                     self.select(*result[0])
                     self.select(*result[1])
@@ -84,7 +84,8 @@ class Game:
         #     row, col = coord
         #     pygame.draw.circle(self.win, PURPLE, (col * SQUARE_SIZE + SQUARE_SIZE//2, row * SQUARE_SIZE + SQUARE_SIZE//2 + MENU_HEIGHT,), 10) 
 
-        self.draw_valid_moves(self.piece_valid_moves)
+        if self.turn == 'white':
+            self.draw_valid_moves(self.piece_valid_moves)
         pygame.display.update()
     
     def _init(self):
@@ -309,12 +310,12 @@ class Game:
 
         return all_moves
     
-    def generate_threat_map(self, board, black_pieces, white_pieces):
+    def generate_threat_map(self, turn, board, black_pieces, white_pieces):
         """
         Helper function that generates all squares that are under attack by the opposing side.
         """
         threats = set()
-        if self.turn == 'white':
+        if turn == 'white':
             to_check = black_pieces
         else:
             to_check = white_pieces
@@ -325,7 +326,7 @@ class Game:
         return threats
     
 
-    def generate_legal_moves(self, pieces, board, used_jump_two_prev):
+    def generate_legal_moves(self, turn, pieces, board, used_jump_two_prev):
         """
         Helper function that generates for each piece, all the legal moves that piece can make.
         """
@@ -340,17 +341,20 @@ class Game:
 
                 clone_board, clone_black_pieces, clone_white_pieces, clone_black_king, clone_white_king = self.perform_test_move(board, piece, move[0], move[1], used_jump_two_prev)
 
-                test_threatmap = self.generate_threat_map(clone_board, clone_black_pieces, clone_white_pieces)
+                test_threatmap = self.generate_threat_map(turn, clone_board, clone_black_pieces, clone_white_pieces)
 
                 # if your king is not in check, then the move is valid
                 if piece.color == 'black' and type(piece) != King:
-                    if (clone_black_king.row, clone_black_king.col) not in test_threatmap:
+                    if not clone_black_king:
+                        continue
+                    elif (clone_black_king.row, clone_black_king.col) not in test_threatmap:
                         current.add(move)
                 elif type(piece) != King:
-                    if (clone_white_king.row, clone_white_king.col) not in test_threatmap:
+                    if not clone_white_king:
+                        continue
+                    elif (clone_white_king.row, clone_white_king.col) not in test_threatmap:
                         current.add(move)
                 else:
-                    # print(piece, test_threatmap, (move[0], move[1]))
                     if (move[0], move[1]) not in test_threatmap:
                         current.add(move)
             
@@ -366,6 +370,7 @@ class Game:
         clone_board = []
         clone_white_pieces = []
         clone_black_pieces = []
+        clone_black_king, clone_white_king = None, None
 
         # clones board to test move out
         for r in range(ROWS):
@@ -449,6 +454,12 @@ class Game:
             clone_board[temp.row][piece.col] = piece
         
         return clone_board, clone_black_pieces, clone_white_pieces, clone_black_king, clone_white_king
+
+    def change_turn(self):
+        if self.turn == "black":
+            self.turn = "white"
+        else:
+            self.turn = "black"
 
     def change_turn(self):
         if self.turn == "black":

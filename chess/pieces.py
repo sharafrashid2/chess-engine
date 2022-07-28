@@ -171,7 +171,7 @@ class Pawn(Piece):
         ):
             valid.add((self.row + 2*direction, self.col))
 
-        if board[self.row + 1*direction][self.col] == 0 and not threat_map:
+        if self.row + 1*direction in range(0, ROWS) and board[self.row + 1*direction][self.col] == 0 and not threat_map:
             valid.add((self.row + 1*direction, self.col))
         
         for coord in diagonal_check:
