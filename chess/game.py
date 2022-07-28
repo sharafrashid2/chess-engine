@@ -3,6 +3,8 @@ import pygame
 from chess.board import Board
 from .pieces import Pawn, Queen, Rook, Bishop, Knight, King
 from .constants import BLUE, COLS, RED, ROWS, SQUARE_SIZE, MENU_HEIGHT, LIGHT_BROWN, WIDTH, BLACK, PURPLE
+from chess.computer_ai import evaluate_board, get_piece_value, construct_decision_tree, mini_max
+
 
 class Game:
     def __init__(self, win):
@@ -12,7 +14,7 @@ class Game:
     def update(self):
         self.board.draw()
 
-        if self.promotion:
+        if self.promotion and self.turn == 'white':
             # rook promotion box
             pygame.draw.rect(self.win, LIGHT_BROWN, (20 + (WIDTH-60)/5, 10, (WIDTH-60)/5, MENU_HEIGHT-20))
             self.win.blit(self.board.font.render('Rook', True, BLACK), (55 + (WIDTH-60)/5, 15))
@@ -26,16 +28,34 @@ class Game:
             pygame.draw.rect(self.win, LIGHT_BROWN, (50 + 4 * (WIDTH-60)/5, 10, (WIDTH-60)/5, MENU_HEIGHT-20))
             self.win.blit(self.board.font.render('Queen', True, BLACK), (80 + 4 * (WIDTH-60)/5, 15))
         
+        if self.promotion and self.turn == 'black':
+            self.promote_pawn(Queen, *self.promote_unit)
+            self.promotion = False
+            self.promote_unit = None
+            self.go_next_turn()
+        
         if self.changed_turn:
             self.generate_all_moves()
             self.threat_map = self.generate_threat_map(self.board.board, self.board.black_pieces, self.board.white_pieces)
-            all_legal_moves = self.generate_legal_moves()
+
+            if self.turn == 'white':
+                pieces = self.board.white_pieces
+            else:
+                pieces = self.board.black_pieces
+
+            self.all_legal_moves = self.generate_legal_moves(pieces, self.board.board, self.board.used_jump_two_prev)
             self.changed_turn = False
 
             self.is_check()
-            self.is_checkmate(all_legal_moves)
-            self.is_stalemate(all_legal_moves)
-        
+            self.is_checkmate(self.all_legal_moves)
+            self.is_stalemate(self.all_legal_moves)
+
+            if not self.checkmated and not self.stalemated and self.turn == 'black':
+                tree = construct_decision_tree(self.board.board, self.board.black_pieces, self.board.white_pieces, self, 3)
+                result, total = mini_max(tree, 3)
+                self.select(*result[0])
+                self.select(*result[1])
+
         if self.checked and not self.checkmated and not self.stalemated:
             pygame.draw.circle(self.win, RED, (self.king[1] * SQUARE_SIZE + SQUARE_SIZE//2, self.king[0] * SQUARE_SIZE + SQUARE_SIZE//2 + MENU_HEIGHT,), 10)
             self.win.blit(self.board.font.render("You are checked!", True, BLACK), (20 + (WIDTH-60)/5, 15))
@@ -48,7 +68,7 @@ class Game:
 
         elif self.stalemated:
             self.win.blit(self.board.font.render("Stalemate! The game is a draw.", True, BLACK), (20 + (WIDTH-60)/5, 15))
-
+            
         # you can uncomment the following code to see enemy's threat squares each turn
         # for coord in self.threat_map:
         #     row, col = coord
@@ -62,6 +82,7 @@ class Game:
         self.board = Board(self.win)
         self.turn = "white"
         self.piece_valid_moves = set()
+        self.all_legal_moves = set()
         self.changed_turn = True
         self.king = None
         self.checked = False
@@ -91,10 +112,9 @@ class Game:
             if piece != 0 and (row, col) in self.piece_valid_moves:
                 if self.turn == "white":
                     self.board.black_pieces.remove(piece)
-                    self.board.black_left -= 1
                 else:
                     self.board.white_pieces.remove(piece)
-                    self.board.white_left -= 1
+
                 self.board.board[piece.row][piece.col] = 0
             if type(self.selected) == Pawn or type(self.selected) == King:
                 prev = (self.selected.row, self.selected.col)
@@ -149,10 +169,8 @@ class Game:
 
                     if self.turn == "white":
                         self.board.black_pieces.remove(to_remove)
-                        self.board.black_left -= 1
                     else:
                         self.board.white_pieces.remove(to_remove)
-                        self.board.white_left -= 1
 
                 if self.board.used_jump_two_prev != False and self.board.used_jump_two_prev[1] == 1:
                     self.board.used_jump_two_prev = False
@@ -238,10 +256,16 @@ class Game:
         all_moves = set()
         if self.turn == 'white':
             for piece in self.board.white_pieces:
-                all_moves.update(piece.get_all_moves(self.board, self.board.board))
+                if type(piece) == Pawn:
+                    all_moves.update(piece.get_all_moves(self.board.board, used_jump_two_prev=self.board.used_jump_two_prev))
+                else:
+                    all_moves.update(piece.get_all_moves(self.board.board))
         else:
             for piece in self.board.black_pieces:
-                all_moves.update(piece.get_all_moves(self.board, self.board.board))
+                if type(piece) == Pawn:
+                    all_moves.update(piece.get_all_moves(self.board.board, used_jump_two_prev=self.board.used_jump_two_prev))
+                else:
+                    all_moves.update(piece.get_all_moves(self.board.board))
 
         return all_moves
     
@@ -253,109 +277,22 @@ class Game:
             to_check = white_pieces
 
         for piece in to_check:
-            threats.update(piece.get_threat_spots(self.board, board))
+            threats.update(piece.get_threat_spots(board))
         
         return threats
     
 
-    def generate_legal_moves(self):
+    def generate_legal_moves(self, pieces, board, used_jump_two_prev):
         all_legal_moves = set()
-        if self.turn == 'white':
-            pieces = self.board.white_pieces
-        else:
-            pieces = self.board.black_pieces
-
+        # if self.turn == 'white':
+        #     pieces = self.board.white_pieces
+        # else:
+        #     pieces = self.board.black_pieces
         for piece in pieces:
             current = set()
             for move in piece.possible_moves:
-                clone_board = []
-                clone_white_pieces = []
-                clone_black_pieces = []
-                clone_black_king = None
-                clone_white_king = None
 
-                # clones board to test move out
-                for r in range(ROWS):
-                    row = []
-                    for c in range(COLS):
-                        curr = self.board.get_piece(r, c)
-
-                        if curr == 0:
-                            row.append(0)
-                        elif curr.name == 'pawn':
-                            row.append(Pawn(curr.row, curr.col, curr.color, curr.win, curr.jump_two))
-                        elif curr.name == 'rook':
-                            row.append(Rook(curr.row, curr.col, curr.color, curr.win, curr.moved))
-                        elif curr.name == 'knight':
-                            row.append(Knight(curr.row, curr.col, curr.color, curr.win))
-                        elif curr.name == 'bishop':
-                            row.append(Bishop(curr.row, curr.col, curr.color, curr.win))
-                        elif curr.name == 'queen':
-                            row.append(Queen(curr.row, curr.col, curr.color, curr.win))
-                        elif curr.name == 'king':
-                            row.append(King(curr.row, curr.col, curr.color, curr.win, curr.moved))
-                    clone_board.append(row)
-                
-                # clones pieces as well so the actual game isn't interfered with
-                for r in range(ROWS):
-                    for c in range(COLS):
-                        if clone_board[r][c] != 0 and clone_board[r][c].color == 'white':
-                            clone_white_pieces.append(clone_board[r][c])
-                            if type(clone_board[r][c]) == King:
-                                clone_white_king = clone_board[r][c]
-                        elif clone_board[r][c] != 0:
-                            clone_black_pieces.append(clone_board[r][c])
-                            if type(clone_board[r][c]) == King:
-                                clone_black_king = clone_board[r][c]
-                
-                # carries out move to see if king will be put in check after it
-                temp = clone_board[piece.row][piece.col]
-                prev = (temp.row, temp.col)
-                temp.row, temp.col = move[0], move[1]
-                check_remove = clone_board[move[0]][move[1]]
-                if check_remove != 0 and piece.color == 'white':
-                    clone_black_pieces.remove(check_remove)
-                elif check_remove != 0:
-                    clone_white_pieces.remove(check_remove)
-                clone_board[piece.row][piece.col] = 0
-                clone_board[move[0]][move[1]] = temp
-
-                # en passe case
-                test = self.board.used_jump_two_prev
-                if test:
-                    test = [test[0], test[1], Pawn(test[2].row, test[2].col, test[2].color, test[2].win, test[2].jump_two)]
-                if (
-                    type(temp) == Pawn and test and
-                    test[1] == 1 and abs(temp.row - test[2].row) == 1 and
-                    temp.col == test[2].col
-                ):
-                    clone_board[test[2].row][test[2].col] = 0
-
-                    if piece.color == "white":
-                        for item in clone_black_pieces:
-                            if item.row == test[2].row and item.col == test[2].col:
-                                to_remove = item
-                        clone_black_pieces.remove(to_remove)
-                        self.board.black_left -= 1
-                    else:
-                        for item in clone_white_pieces:
-                            if item.row == test[2].row and item.col == test[2].col:
-                                to_remove = item
-                        clone_white_pieces.remove(to_remove)
-                        self.board.white_left -= 1
-
-                # castling case
-                if type(temp) == King and (move[1] - prev[1] == 2):
-                    piece = clone_board[temp.row][COLS-1]
-                    piece.col = self.selected.col - 1
-                    clone_board[temp.row][COLS-1] = 0
-                    clone_board[temp.row][piece.col] = piece
-
-                if type(self.selected) == King and self.selected.col - prev[1] == -2:
-                    piece = clone_board[temp.row][0]
-                    piece.col = self.selected.col + 1
-                    clone_board[temp.row][0] = 0
-                    clone_board[temp.row][piece.col] = piece
+                clone_board, clone_black_pieces, clone_white_pieces, clone_black_king, clone_white_king = self.perform_test_move(board, piece, move[0], move[1], used_jump_two_prev)
 
                 test_threatmap = self.generate_threat_map(clone_board, clone_black_pieces, clone_white_pieces)
 
@@ -375,6 +312,94 @@ class Game:
             piece.possible_moves = current
 
         return all_legal_moves
+    
+    def perform_test_move(self, board, piece, move_row, move_col, used_jump_two_prev):
+        clone_board = []
+        clone_white_pieces = []
+        clone_black_pieces = []
+
+        # clones board to test move out
+        for r in range(ROWS):
+            row = []
+            for c in range(COLS):
+                curr = board[r][c]
+                if curr == 0:
+                    row.append(0)
+                elif curr.name == 'pawn':
+                    row.append(Pawn(curr.row, curr.col, curr.color, curr.win, curr.jump_two))
+                elif curr.name == 'rook':
+                    row.append(Rook(curr.row, curr.col, curr.color, curr.win, curr.moved))
+                elif curr.name == 'knight':
+                    row.append(Knight(curr.row, curr.col, curr.color, curr.win))
+                elif curr.name == 'bishop':
+                    row.append(Bishop(curr.row, curr.col, curr.color, curr.win))
+                elif curr.name == 'queen':
+                    row.append(Queen(curr.row, curr.col, curr.color, curr.win))
+                elif curr.name == 'king':
+                    row.append(King(curr.row, curr.col, curr.color, curr.win, curr.moved))
+            clone_board.append(row)
+        
+        # clones pieces as well so the actual game isn't interfered with
+        for r in range(ROWS):
+            for c in range(COLS):
+                if clone_board[r][c] != 0 and clone_board[r][c].color == 'white':
+                    clone_white_pieces.append(clone_board[r][c])
+                    if type(clone_board[r][c]) == King:
+                        clone_white_king = clone_board[r][c]
+                elif clone_board[r][c] != 0:
+                    clone_black_pieces.append(clone_board[r][c])
+                    if type(clone_board[r][c]) == King:
+                        clone_black_king = clone_board[r][c]
+
+        
+        # carries out move to see if king will be put in check after it
+        temp = clone_board[piece.row][piece.col]
+        prev = (temp.row, temp.col)
+        temp.row, temp.col = move_row, move_col
+        check_remove = clone_board[move_row][move_col]
+        if check_remove != 0 and piece.color == 'white':
+            clone_black_pieces.remove(check_remove)
+        elif check_remove != 0:
+            clone_white_pieces.remove(check_remove)
+        clone_board[piece.row][piece.col] = 0
+        clone_board[move_row][move_col] = temp
+
+        # en passe case
+        test = used_jump_two_prev
+        if test:
+            test = [test[0], test[1], Pawn(test[2].row, test[2].col, test[2].color, test[2].win, test[2].jump_two)]
+        if (
+            type(temp) == Pawn and test and
+            test[1] == 1 and abs(temp.row - test[2].row) == 1 and
+            temp.col == test[2].col
+        ):
+            clone_board[test[2].row][test[2].col] = 0
+
+            if piece.color == "white":
+                for item in clone_black_pieces:
+                    if item.row == test[2].row and item.col == test[2].col:
+                        to_remove = item
+                clone_black_pieces.remove(to_remove)
+            else:
+                for item in clone_white_pieces:
+                    if item.row == test[2].row and item.col == test[2].col:
+                        to_remove = item
+                clone_white_pieces.remove(to_remove)
+
+        # castling case
+        if type(temp) == King and (move_col - prev[1] == 2):
+            piece = clone_board[temp.row][COLS-1]
+            piece.col = temp.col - 1
+            clone_board[temp.row][COLS-1] = 0
+            clone_board[temp.row][piece.col] = piece
+
+        if type(temp) == King and move_col - prev[1] == -2:
+            piece = clone_board[temp.row][0]
+            piece.col = temp.col + 1
+            clone_board[temp.row][0] = 0
+            clone_board[temp.row][piece.col] = piece
+        
+        return clone_board, clone_black_pieces, clone_white_pieces, clone_black_king, clone_white_king
 
     def change_turn(self):
         if self.turn == "black":

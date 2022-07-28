@@ -59,7 +59,7 @@ class Piece():
             if piece != 0 and variable != variable_start:
                 break
     
-    def _traverse_straight_all(self, board_object, board, valid, threat_map=False):
+    def _traverse_straight_all(self, board, valid, threat_map=False):
         if not threat_map:
             self._traverse_straight(self.row, ROWS, self.col, 1, board, valid, 'row')
             self._traverse_straight(self.row, ROWS, self.col, -1, board, valid, 'row')
@@ -72,7 +72,7 @@ class Piece():
             self._traverse_straight(self.col, COLS, self.row, -1, board, valid, 'col', True)
 
         
-    def _traverse_diagonal(self, board_obj, board, row, col, direction, valid, threat_map=False):
+    def _traverse_diagonal(self, board, row, col, direction, valid, threat_map=False):
         def condition_map(val1, val2, direction):
             if direction == 'right': 
                 return val1 >= 0 and val2 < COLS
@@ -113,17 +113,17 @@ class Piece():
             current[1] += incr_1
             condition = condition_map(current[0], current[1], direction)
     
-    def _traverse_diagonal_all(self, board_object, board, valid, threat_map=False):
+    def _traverse_diagonal_all(self, board, valid, threat_map=False):
         if not threat_map:
-            self._traverse_diagonal(board_object, board, self.row, self.col, 'right', valid)
-            self._traverse_diagonal(board_object, board, self.row, self.col, 'right-opp', valid)
-            self._traverse_diagonal(board_object, board, self.row, self.col, 'left', valid)
-            self._traverse_diagonal(board_object, board, self.row, self.col, 'left-opp', valid)
+            self._traverse_diagonal(board, self.row, self.col, 'right', valid)
+            self._traverse_diagonal(board, self.row, self.col, 'right-opp', valid)
+            self._traverse_diagonal(board, self.row, self.col, 'left', valid)
+            self._traverse_diagonal(board, self.row, self.col, 'left-opp', valid)
         else:
-            self._traverse_diagonal(board_object, board, self.row, self.col, 'right', valid, True)
-            self._traverse_diagonal(board_object, board, self.row, self.col, 'right-opp', valid, True)
-            self._traverse_diagonal(board_object, board, self.row, self.col, 'left', valid, True)
-            self._traverse_diagonal(board_object, board, self.row, self.col, 'left-opp', valid, True)
+            self._traverse_diagonal(board, self.row, self.col, 'right', valid, True)
+            self._traverse_diagonal(board, self.row, self.col, 'right-opp', valid, True)
+            self._traverse_diagonal(board, self.row, self.col, 'left', valid, True)
+            self._traverse_diagonal(board, self.row, self.col, 'left-opp', valid, True)
     
     def __repr__(self):
         return f"{self.color}_{self.name}"
@@ -136,7 +136,7 @@ class Pawn(Piece):
         self.jump_two = jump_two
         self.name = "pawn"
 
-    def get_all_moves(self, board_object, board, threat_map = False):
+    def get_all_moves(self, board, used_jump_two_prev = False, threat_map = False):
         valid = set()
         if self.color == 'white':
             diagonal_check = [(self.row-1, self.col-1), (self.row-1, self.col+1)]
@@ -145,23 +145,23 @@ class Pawn(Piece):
             diagonal_check = [(self.row+1, self.col+1), (self.row+1, self.col-1)]
             direction = 1
 
-        if (self.jump_two == True and board_object.get_piece(self.row + direction, self.col) == 0 and 
-            board_object.get_piece(self.row + 2*direction, self.col) == 0 and not threat_map
+        if (self.jump_two == True and board[self.row + direction][self.col] == 0 and 
+            board[self.row + 2*direction][self.col] == 0 and not threat_map
         ):
             valid.add((self.row + 2*direction, self.col))
 
-        if board_object.get_piece(self.row + 1*direction, self.col) == 0 and not threat_map:
+        if board[self.row + 1*direction][self.col] == 0 and not threat_map:
             valid.add((self.row + 1*direction, self.col))
         
         for coord in diagonal_check:
             if coord[0] in range(0, ROWS) and coord[1] in range(0, COLS):
-                piece = board_object.get_piece(*coord)
+                piece = board[coord[0]][coord[1]]
             else:
                 continue
             if piece != 0 and piece.color != self.color and not threat_map:
                 valid.add(coord)
             
-            test = board_object.used_jump_two_prev
+            test = used_jump_two_prev
 
             if (piece == 0 and test and test[1] == 1 and abs(self.col - test[2].col) == 1 and
                 self.row == test[2].row and abs(coord[0]-test[2].row) == 1 and coord[1] == test[2].col and
@@ -177,23 +177,23 @@ class Pawn(Piece):
 
         return valid
 
-    def get_threat_spots(self, board_object, board):
-        return self.get_all_moves(board_object, board, True)
+    def get_threat_spots(self, board):
+        return self.get_all_moves(board, threat_map=True)
         
 class Bishop(Piece):
     def __init__(self, row, col, color, win):
         Piece.__init__(self, row, col, color, win)
         self.name = "bishop"
     
-    def get_all_moves(self, board_object, board):
+    def get_all_moves(self, board):
         valid = set()
-        self._traverse_diagonal_all(board_object, board, valid)
+        self._traverse_diagonal_all(board, valid)
         self.possible_moves = valid
         return valid
     
-    def get_threat_spots(self, board_object, board):
+    def get_threat_spots(self, board):
         valid = set()
-        self._traverse_diagonal_all(board_object, board, valid, True)
+        self._traverse_diagonal_all(board, valid, True)
         return valid
     
 
@@ -202,7 +202,7 @@ class Knight(Piece):
         Piece.__init__(self, row, col, color, win)
         self.name = "knight"
 
-    def get_all_moves(self, board_object, board, threat_map = False):
+    def get_all_moves(self, board, threat_map = False):
         valid = set()
         to_check = [
                         (self.row - 2, self.col + 1), (self.row - 2, self.col - 1), (self.row + 2, self.col + 1), 
@@ -225,8 +225,8 @@ class Knight(Piece):
 
         return valid
     
-    def get_threat_spots(self, board_object, board):
-        return self.get_all_moves(board_object, board, True)
+    def get_threat_spots(self, board):
+        return self.get_all_moves(board, True)
 
 class Rook(Piece):
     def __init__(self, row, col, color, win, moved):
@@ -234,15 +234,15 @@ class Rook(Piece):
         self.name = "rook"
         self.moved = moved
     
-    def get_all_moves(self, board_object, board):
+    def get_all_moves(self, board):
         valid = set()
-        self._traverse_straight_all(board_object, board, valid)
+        self._traverse_straight_all(board, valid)
         self.possible_moves = valid
         return valid
     
-    def get_threat_spots(self, board_object, board):
+    def get_threat_spots(self, board):
         valid = set()
-        self._traverse_straight_all(board_object, board, valid, True)
+        self._traverse_straight_all(board, valid, True)
         return valid
         
 
@@ -251,17 +251,17 @@ class Queen(Piece):
         Piece.__init__(self, row, col, color, win)
         self.name = "queen"
     
-    def get_all_moves(self, board_object, board):
+    def get_all_moves(self, board):
         valid = set()
-        self._traverse_straight_all(board_object, board, valid)
-        self._traverse_diagonal_all(board_object, board, valid)
+        self._traverse_straight_all(board, valid)
+        self._traverse_diagonal_all(board, valid)
         self.possible_moves = valid
         return valid
     
-    def get_threat_spots(self, board_object, board):
+    def get_threat_spots(self, board):
         valid = set()
-        self._traverse_straight_all(board_object, board, valid, True)
-        self._traverse_diagonal_all(board_object, board, valid, True)
+        self._traverse_straight_all(board, valid, True)
+        self._traverse_diagonal_all(board, valid, True)
         return valid
 
 class King(Piece):
@@ -270,7 +270,7 @@ class King(Piece):
         self.name = "king"
         self.moved = moved
 
-    def get_all_moves(self, board_object, board, threat_map=False):
+    def get_all_moves(self, board, threat_map=False):
         valid = set()
 
         if self.moved == False:
@@ -303,6 +303,6 @@ class King(Piece):
         
         return valid
     
-    def get_threat_spots(self, board_object, board):
-        return self.get_all_moves(board_object, board, True)
+    def get_threat_spots(self, board):
+        return self.get_all_moves(board, True)
     

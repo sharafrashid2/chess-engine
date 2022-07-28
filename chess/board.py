@@ -15,7 +15,6 @@ class Board:
     def __init__(self, win):
         self.board = []
         self.font = pygame.font.SysFont('Arial', 17)
-        self.white_left = self.black_left = 16
         self.black_pieces = []
         self.white_pieces = []
         self.used_jump_two_prev = False

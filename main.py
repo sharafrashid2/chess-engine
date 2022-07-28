@@ -21,6 +21,7 @@ def main():
     run = True
     clock = pygame.time.Clock()
     game = Game(WIN)
+    counter = 0
 
     while run:
         clock.tick(FPS)
@@ -71,7 +72,7 @@ def main():
                 game.go_next_turn()
 
             # playing game as usual
-            elif event.type == pygame.MOUSEBUTTONDOWN and pygame.mouse.get_pos()[1] > MENU_HEIGHT and game.promotion == False:
+            elif event.type == pygame.MOUSEBUTTONDOWN and pygame.mouse.get_pos()[1] > MENU_HEIGHT and game.promotion == False and game.turn == 'white':
                 row, col = get_pos_from_mouse(pos)
                 game.select(row, col)
 
