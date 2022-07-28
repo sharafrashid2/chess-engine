@@ -11,9 +11,9 @@ This chess engine is able to find all legal moves for every board state and dete
 Here are some examples of the game running.
 <br></br>
 <img src="public/example_board.png" width="400px" text-align="center">
-&nbsp;
+&nbsp; &nbsp;
 <img src="public/example_board2.png" width="400px" text-align="center">
 <br></br>
 <img src="public/example_board3.png" width="400px" text-align="center">
-&nbsp;
+&nbsp; &nbsp;
 <img src="public/example_board4.png" width="400px" text-align="center">
