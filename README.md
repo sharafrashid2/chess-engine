@@ -4,7 +4,7 @@
 
 To run the game, simply download the directory, and from the root directory, run the main.py file and it will open the game in a window. 
 
-This chess engine is able to find all legal moves for every board state and detect checkmates and stalemates, so complete chess games can be played with the program. The engine also includes special moves which are castling, en passes, and promotions. The game currently supports only a player vs computer mode: the user plays on the white side of the board while the computer plays on the black side. The computer utilizes the minimax algorithm to search the game's decision tree for the most beneficial moves.
+This chess engine is able to find all legal moves for every board state and detect checkmates and stalemates, so complete chess games can be played with the program. The engine also includes special moves which are castling, en passes, and promotions. The game currently supports only a player vs computer mode: the user plays on the white side of the board while the computer plays on the black side. The computer utilizes the minimax algorithm to search the game's decision tree up to a specified depth for the most beneficial moves (currently depth is set to 2 so that there is no loading time between moves).
 
 ## Examples
 
