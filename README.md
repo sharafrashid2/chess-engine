@@ -10,4 +10,4 @@ I am currently working on a chess AI that the user can play against.
 ## Examples
 
 Here is an example of the game running.
-![alt text](https://github.com/sharafrashid2/chess-engine/blob/master/public/board_example.png)
+![alt text](https://github.com/sharafrashid2/chess-engine/blob/master/public/example_board.png)
