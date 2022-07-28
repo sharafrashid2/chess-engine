@@ -2,6 +2,11 @@ import pygame
 from .constants import SQUARE_SIZE, ROWS, COLS, MENU_HEIGHT
 import sys, os
 
+"""
+This file contains the classes for each of the 6 different pieces in chess
+"""
+
+
 class Piece():
     def __init__(self, row, col, color, win):
         self.row = row
@@ -35,6 +40,9 @@ class Piece():
         self.calc_pos()
     
     def _traverse_straight(self, variable_start, variable_end, constant, direction, board, valid, label, threat_map = False):
+        """
+        This is a helper function for getting moves of pieces traversing vertically or horizontally.
+        """
         if direction == -1:
             interval = range(variable_start, -1, -1)
         else:
@@ -60,6 +68,9 @@ class Piece():
                 break
     
     def _traverse_straight_all(self, board, valid, threat_map=False):
+        """
+        This is a helper function for getting moves of pieces traversing vertically/horizontally in all 4 directions.
+        """
         if not threat_map:
             self._traverse_straight(self.row, ROWS, self.col, 1, board, valid, 'row')
             self._traverse_straight(self.row, ROWS, self.col, -1, board, valid, 'row')
@@ -73,6 +84,10 @@ class Piece():
 
         
     def _traverse_diagonal(self, board, row, col, direction, valid, threat_map=False):
+        """
+        This is a helper function for getting moves of pieces traversing diagonally.
+        """
+
         def condition_map(val1, val2, direction):
             if direction == 'right': 
                 return val1 >= 0 and val2 < COLS
@@ -114,6 +129,9 @@ class Piece():
             condition = condition_map(current[0], current[1], direction)
     
     def _traverse_diagonal_all(self, board, valid, threat_map=False):
+        """
+        This is a helper function for getting moves of pieces traversing diagonally in all four directions.
+        """
         if not threat_map:
             self._traverse_diagonal(board, self.row, self.col, 'right', valid)
             self._traverse_diagonal(board, self.row, self.col, 'right-opp', valid)
@@ -137,6 +155,10 @@ class Pawn(Piece):
         self.name = "pawn"
 
     def get_all_moves(self, board, used_jump_two_prev = False, threat_map = False):
+        """
+        This is a helper function that generates all possible moves a piece can do based off the basic 
+        rules of the game. (Not all of the moves here may be legal). Every piece object has this method.
+        """
         valid = set()
         if self.color == 'white':
             diagonal_check = [(self.row-1, self.col-1), (self.row-1, self.col+1)]
@@ -178,6 +200,10 @@ class Pawn(Piece):
         return valid
 
     def get_threat_spots(self, board):
+        """
+        This is a helper function that generates all possible squares a piece can attack at. All piece objects
+        have this method.
+        """
         return self.get_all_moves(board, threat_map=True)
         
 class Bishop(Piece):

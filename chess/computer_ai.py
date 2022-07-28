@@ -4,8 +4,12 @@ from chess.constants import ROWS, COLS
 from .scores import white_pawn_scores, black_pawn_scores, knight_scores, white_rook_scores, black_rook_scores, white_bishop_scores, black_bishop_scores, white_king_scores, black_king_scores, queen_scores
 from .pieces import Pawn, Rook, Bishop, Knight, Queen, King
 
+# This file contains all the functions for calculating the computer's next move
 
 def get_piece_value(piece):
+    """
+    This function calculates the score for a specific piece based off the piece it is and its position on the board.
+    """
     if piece == 0:
         return 0
     
@@ -45,6 +49,10 @@ def get_piece_value(piece):
     return -absolute_value if piece.color == 'white' else absolute_value
 
 def evaluate_board(board):
+    """
+    This is a helper function for evaluating the total score of a board based off the pieces currently on it
+    and their positions.
+    """
     total = 0
 
     for row in range(ROWS):
@@ -60,6 +68,10 @@ def switch_turn(current):
     return 'white'
 
 def construct_decision_tree(start_board, start_black_pieces, start_white_pieces, game, deepest_level):
+    """
+    This function constructs the game's decision tree given the current board state, and you can choose
+    how deep you would like the decision tree to go with the parameter deepest_level.
+    """
     tree = {}
     def build(tree, turn, start_board, start_black_pieces, start_white_pieces, game, level):
 
@@ -93,8 +105,14 @@ def construct_decision_tree(start_board, start_black_pieces, start_white_pieces,
 
 
 def mini_max(tree, deepest_level):
+    """
+    This is the main algorithm (mini-max) for finding which move is the best. The algorithm does so by doing a depth
+    first search for the highest sum of game board scores on the game's current decision tree up to a specified level, 
+    and then returns the starting node that is associated with that highest score. This returned node would be the 
+    move that the computer makes.
+    """
     start = []
-    def traverse(tree, depth, turn):
+    def traverse(tree, depth, turn, alpha, beta):
         if depth == deepest_level:
             return 0
         
@@ -104,25 +122,36 @@ def mini_max(tree, deepest_level):
             min_score = float('inf')
 
         for key in tree:
-            score = tree[key][0] + traverse(tree[key][4], depth+1, switch_turn(turn))
+            score = tree[key][0] + traverse(tree[key][4], depth+1, switch_turn(turn), alpha, beta)
             if turn == 'black' and score > max_score:
                 max_score = score
+                alpha = max(alpha, max_score)
+
                 if depth == 0:
                     if len(start) > 0:
                         start.pop(0)
                     start.append(key)
+
+                if beta <= alpha:
+                    break
+        
             elif turn == 'white' and score < min_score:
                 min_score = score
+                beta = min(min_score, beta)
+
                 if depth == 0:
                     if len(start) > 0:
                         start.pop(0)
                     start.append(key)
-
+                
+                if beta <= alpha:
+                    break
+                
         return max_score if turn == 'black' else min_score
 
-    total = traverse(tree, 0, 'black')
+    total = traverse(tree, 0, 'black', -float('inf'), float('inf'))
     
-    return start[0], total
+    return start[0], total if start else None
 
         
 

@@ -3,7 +3,15 @@ from .pieces import Pawn, Rook, Queen, King, Bishop, Knight
 from .constants import BLACK, DARK_GREEN, LIGHT_GREEN, ROWS, COLS, SQUARE_SIZE, BROWN, WIDTH, MENU_HEIGHT, LIGHT_BROWN
 from pygame.locals import *
 
+"""
+This file contains the board class of the chess engine. With the board object, a board is created for the game to start on,
+and the object stores the current board as well all the pieces for each color currently on the board.
+""" 
+
 def place_piece(row, col, color, win):
+    """ 
+    Helper function for initially placing the chess pieces on the board.
+    """
     piece_order = [
                     Rook(row, col, color, win, False), Knight(row, col, color, win), Bishop(row, col, color, win), Queen(row, col, color, win), 
                     King(row, col, color, win, False), Bishop(row, col, color, win), Knight(row, col, color, win), Rook(row, col, color, win, False),
@@ -22,6 +30,9 @@ class Board:
         self.create_board()
 
     def draw_squares(self):
+        """
+        Draws the checkered squares on the board.
+        """
         self.win.fill(DARK_GREEN)
         pygame.draw.rect(self.win, BROWN, (0, 0, WIDTH, MENU_HEIGHT ))
         pygame.draw.rect(self.win, LIGHT_BROWN, (10, 10, (WIDTH-60)/5, MENU_HEIGHT-20))
@@ -31,6 +42,9 @@ class Board:
                 pygame.draw.rect(self.win, LIGHT_GREEN, (row * SQUARE_SIZE, col * SQUARE_SIZE + MENU_HEIGHT, SQUARE_SIZE, SQUARE_SIZE))
 
     def create_board(self):
+        """
+        Creates a representation of the board as a 2D array.
+        """
         for row in range(ROWS):
             self.board.append([])
             for col in range(COLS):
@@ -51,6 +65,7 @@ class Board:
                 
     
     def draw(self):
+        """ Draws all the pieces on the board. """
         self.draw_squares()
         for row in range(ROWS):
             for col in range(COLS):
@@ -60,6 +75,9 @@ class Board:
                     piece.draw(self.win)
     
     def move(self, piece, row, col):
+        """
+        Method that moves a piece on the board to the specified position.
+        """
         self.board[piece.row][piece.col], self.board[row][col] = self.board[row][col], self.board[piece.row][piece.col]
         piece.move(row, col)
         if type(piece) == Pawn:
@@ -69,6 +87,9 @@ class Board:
         return self.board[row][col]
     
     def get_valid_moves(self, piece):
+        """
+        Retrieves all possible moves (may or may not be legal) a specified piece can make.
+        """
         if piece != 0:
             moves = piece.valid_moves(self)
             return moves

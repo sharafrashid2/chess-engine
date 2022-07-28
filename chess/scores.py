@@ -1,5 +1,9 @@
 from copy import deepcopy
 
+"""
+In this file, all the scores for pieces at each position of the board are stored.
+"""
+
 def reverse_array(array):
     result = deepcopy(array)
     result.reverse()

@@ -1,6 +1,10 @@
 import pygame
 from pygame.locals import *
 
+"""
+This file contains all constants used in the chess engine.
+"""
+
 WIDTH, HEIGHT = 600, 650
 ROWS, COLS = 8, 8
 MENU_HEIGHT = 50

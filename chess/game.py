@@ -12,6 +12,10 @@ class Game:
         self._init()
     
     def update(self):
+        """
+        Function that updates game states, plays for the computer, and redraws changes to the game on
+        the graphical user interface.
+        """
         self.board.draw()
 
         if self.promotion and self.turn == 'white':
@@ -34,6 +38,7 @@ class Game:
             self.promote_unit = None
             self.go_next_turn()
         
+        # updates states in the game once a new turn starts based off the new board
         if self.changed_turn:
             self.generate_all_moves()
             self.threat_map = self.generate_threat_map(self.board.board, self.board.black_pieces, self.board.white_pieces)
@@ -50,22 +55,27 @@ class Game:
             self.is_checkmate(self.all_legal_moves)
             self.is_stalemate(self.all_legal_moves)
 
+            # here computer makes decisions for black
             if not self.checkmated and not self.stalemated and self.turn == 'black':
                 tree = construct_decision_tree(self.board.board, self.board.black_pieces, self.board.white_pieces, self, 3)
                 result, total = mini_max(tree, 3)
-                self.select(*result[0])
-                self.select(*result[1])
+                if result:
+                    self.select(*result[0])
+                    self.select(*result[1])
 
+        # displays check text
         if self.checked and not self.checkmated and not self.stalemated:
             pygame.draw.circle(self.win, RED, (self.king[1] * SQUARE_SIZE + SQUARE_SIZE//2, self.king[0] * SQUARE_SIZE + SQUARE_SIZE//2 + MENU_HEIGHT,), 10)
             self.win.blit(self.board.font.render("You are checked!", True, BLACK), (20 + (WIDTH-60)/5, 15))
 
+         # displays checkmate text
         if self.checkmated and self.turn == 'white':
             self.win.blit(self.board.font.render("Checkmate! Black wins.", True, BLACK), (20 + (WIDTH-60)/5, 15))
 
         elif self.checkmated and self.turn == 'black':
             self.win.blit(self.board.font.render("Checkmate! White wins.", True, BLACK), (20 + (WIDTH-60)/5, 15))
 
+        # displays stalemate text
         elif self.stalemated:
             self.win.blit(self.board.font.render("Stalemate! The game is a draw.", True, BLACK), (20 + (WIDTH-60)/5, 15))
             
@@ -98,7 +108,11 @@ class Game:
         self._init()
     
     def select(self, row, col):
-        if self.checkmated:
+        """
+        There are two stages to the select function. The first time you use it, you select a specific piece you want to move. YOu
+        then use the select function again to select the square you want the piece to move to.
+        """
+        if self.checkmated or self.stalemated:
             return
         
         piece = self.board.get_piece(row, col)
@@ -120,7 +134,7 @@ class Game:
                 prev = (self.selected.row, self.selected.col)
             moved = self._move(row, col)
 
-
+            # Here we handle edge cases that arise from special moves in the game
             if moved:
                  # rook and king case so castle can no longer happen
                 if (type(self.selected) == Rook or type(self.selected) == King) and not self.selected.moved:
@@ -185,6 +199,9 @@ class Game:
                 self.piece_valid_moves = set()
     
     def _move(self, row, col):
+        """
+        Helper function for updating a piece's location and also changing its position on the game's board.
+        """
         piece = self.board.get_piece(row, col)
         if self.selected and piece == 0 and (row, col) in self.piece_valid_moves:
             self.board.move(self.selected, row, col)
@@ -193,6 +210,9 @@ class Game:
         return True
     
     def is_check(self):
+        """
+        Checks the game to see if a side is checked.
+        """
         if self.turn == 'white':
             to_check = self.board.white_pieces
         else:
@@ -207,18 +227,28 @@ class Game:
         return False
     
     def is_checkmate(self, all_legal_moves):
+        """
+        Checks the game to see if there is a checkmate.
+        """
         if self.checked and len(all_legal_moves) == 0:
             self.checkmated = True
             return True
         return False
     
     def is_stalemate(self, all_legal_moves):
+        """
+        Checks the game to see if there is a stalemate.
+        """
         if not self.checked and len(all_legal_moves) == 0:
             self.stalemated = True
             return True
         return False
     
     def promote_pawn(self, new_class, row, col):
+        """
+        Function for promoting a pawn to either a rook, bishop, knight, or queen when it reaches the other
+        side of the board.
+        """
         if self.turn == 'white':
             self.board.white_pieces.remove(self.board.get_piece(row, col))
             if new_class == Rook:
@@ -236,6 +266,9 @@ class Game:
 
     
     def draw_valid_moves(self, moves):
+        """
+        Function that draws blue dots of all the squares a piece can move to when you click on it.
+        """
         for move in moves:
             row, col = move
             piece = self.board.get_piece(row, col)
@@ -245,6 +278,9 @@ class Game:
                 pygame.draw.circle(self.win, BLUE, (col * SQUARE_SIZE + SQUARE_SIZE//2, row * SQUARE_SIZE + SQUARE_SIZE//2 + MENU_HEIGHT,), 10)
     
     def go_next_turn(self):
+        """
+        Helper function that updates the states of the game so that it is now a new turn.
+        """
         self.change_turn()
         self.changed_turn = True
         self.selected = None
@@ -253,6 +289,10 @@ class Game:
         self.piece_valid_moves = set()
     
     def generate_all_moves(self):
+        """
+        Helper function that generates for each piece, all moves (legal or not) that can be made. The results of this
+        function are used as a starting point to create a list of all legal moves.
+        """
         all_moves = set()
         if self.turn == 'white':
             for piece in self.board.white_pieces:
@@ -270,6 +310,9 @@ class Game:
         return all_moves
     
     def generate_threat_map(self, board, black_pieces, white_pieces):
+        """
+        Helper function that generates all squares that are under attack by the opposing side.
+        """
         threats = set()
         if self.turn == 'white':
             to_check = black_pieces
@@ -283,6 +326,9 @@ class Game:
     
 
     def generate_legal_moves(self, pieces, board, used_jump_two_prev):
+        """
+        Helper function that generates for each piece, all the legal moves that piece can make.
+        """
         all_legal_moves = set()
         # if self.turn == 'white':
         #     pieces = self.board.white_pieces
@@ -314,6 +360,9 @@ class Game:
         return all_legal_moves
     
     def perform_test_move(self, board, piece, move_row, move_col, used_jump_two_prev):
+        """
+        Helper function for temporarily testing out a move that a piece can make.
+        """
         clone_board = []
         clone_white_pieces = []
         clone_black_pieces = []
