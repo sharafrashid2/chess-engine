@@ -8,5 +8,6 @@ This chess engine is able to find all legal moves for every board state and dete
 
 ## Examples
 
-Here is an example of the game running.
+Here are some examples of the game running.
 ![alt text](public/example_board.png)
+![alt text](public/example_board2.png)
